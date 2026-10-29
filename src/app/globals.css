@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+@theme inline {
+  --font-sans: Arial, Helvetica, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.editor-workspace {
+  background-color: #f4f5fb;
+  background-image:
+    radial-gradient(ellipse at 50% 4%, rgb(224 231 255 / 62%), transparent 48%),
+    radial-gradient(ellipse at 5% 90%, rgb(237 233 254 / 45%), transparent 40%),
+    radial-gradient(#cbd5e1 0.7px, transparent 0.7px);
+  background-size: auto, auto, 22px 22px;
+}
+
+.site-animation-block {
+  animation-duration: 700ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.site-animation-fade {
+  animation-name: site-fade-in;
+}
+
+.site-animation-rise {
+  animation-name: site-rise-in;
+}
+
+.site-animation-zoom {
+  animation-name: site-zoom-in;
+}
+
+@keyframes site-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes site-rise-in {
+  from {
+    opacity: 0;
+    translate: 0 20px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes site-zoom-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-animation-block {
+    animation: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .published-site {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: 100vh !important;
+    height: auto;
+    overflow: visible;
+    padding: 1.5rem 1rem;
+  }
+
+  .published-site-block {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: min(100%, var(--published-block-width)) !important;
+    height: auto !important;
+    min-height: var(--published-block-height);
+    max-width: 100% !important;
+    flex: none;
+    transform: none !important;
+  }
+}
