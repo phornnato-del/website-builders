@@ -57,6 +57,13 @@ type DragState = {
   originRotation: number;
   originPositions: { id: string; x: number; y: number }[];
 };
+type SelectionDrag = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  additive: boolean;
+  selectedIds: string[];
+};
 
 const blockLibrary: { type: BlockType; label: string; icon: string }[] = [
   { type: "container", label: "Container", icon: "▣" },
@@ -1365,6 +1372,15 @@ export default function EditorPage() {
   const canvasFrameRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<HTMLElement>(null);
   const dragState = useRef<DragState | null>(null);
+  const selectionDrag = useRef<SelectionDrag | null>(null);
+  const blockHistory = useRef({
+    past: [] as SiteBlock[][],
+    future: [] as SiteBlock[][],
+    lastBlocks: initialBlocks,
+    applying: false,
+    transaction: null as SiteBlock[] | null,
+  });
+  const historyPage = useRef("home");
   const componentClipboard = useRef<SiteBlock[]>([]);
   const pasteCount = useRef(0);
   const [user, setUser] = useState<User | null>(null);
@@ -1377,6 +1393,12 @@ export default function EditorPage() {
   const [activePageSlug, setActivePageSlug] = useState("home");
   const [selectedId, setPrimarySelectedId] = useState<string | null>("welcome-heading");
   const [selectedIds, setSelectedIds] = useState<string[]>(["welcome-heading"]);
+  const [selectionBox, setSelectionBox] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [canvasColor, setCanvasColor] = useState("#ffffff");
   const [siteAnimation, setSiteAnimation] = useState<SiteAnimation>("none");
   const [viewport, setViewport] = useState<Viewport>("desktop");
@@ -1420,6 +1442,35 @@ export default function EditorPage() {
     setSelectedIds([...selectedIds, id]);
   }
 
+  function startCanvasSelection(event: ReactPointerEvent<HTMLDivElement>) {
+    if (
+      previewMode ||
+      activeDrag ||
+      event.button !== 0 ||
+      event.target !== event.currentTarget
+    ) {
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    event.preventDefault();
+    const bounds = canvas.getBoundingClientRect();
+    const startX = (event.clientX - bounds.left) / canvasZoom;
+    const startY = (event.clientY - bounds.top) / canvasZoom;
+    const additive = event.shiftKey;
+    const retainedIds = additive ? selectedIds : [];
+    selectionDrag.current = {
+      pointerId: event.pointerId,
+      startX,
+      startY,
+      additive,
+      selectedIds: retainedIds,
+    };
+    if (!additive) setSelectedId(null);
+    setSelectionBox({ left: startX, top: startY, width: 0, height: 0 });
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
   const fitCanvas = useCallback(() => {
     const workspace = workspaceRef.current;
     const canvasFrame = canvasFrameRef.current;
@@ -1450,6 +1501,33 @@ export default function EditorPage() {
   }, [activePageSlug, fitCanvas, fitCanvasToWidth, previewMode, viewport]);
 
   useEffect(() => {
+    const history = blockHistory.current;
+    if (historyPage.current !== activePageSlug) {
+      historyPage.current = activePageSlug;
+      history.past = [];
+      history.future = [];
+      history.lastBlocks = blocks;
+      history.transaction = null;
+      history.applying = false;
+      return;
+    }
+    if (history.lastBlocks === blocks) return;
+    if (history.applying) {
+      history.applying = false;
+      history.lastBlocks = blocks;
+      return;
+    }
+    if (history.transaction !== null) {
+      history.lastBlocks = blocks;
+      return;
+    }
+    history.past.push(history.lastBlocks);
+    if (history.past.length > 100) history.past.shift();
+    history.future = [];
+    history.lastBlocks = blocks;
+  }, [activePageSlug, blocks]);
+
+  useEffect(() => {
     function handleEditorShortcuts(event: KeyboardEvent) {
       if (previewMode) return;
       const target = event.target;
@@ -1472,6 +1550,28 @@ export default function EditorPage() {
 
       const hasModifier = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
+      if (hasModifier && (key === "z" || key === "y")) {
+        const history = blockHistory.current;
+        const isRedo = key === "y" || (key === "z" && event.shiftKey);
+        const source = isRedo ? history.future : history.past;
+        const destination = source.pop();
+        if (!destination) return;
+        event.preventDefault();
+        if (isRedo) {
+          history.past.push(history.lastBlocks);
+        } else {
+          history.future.push(history.lastBlocks);
+        }
+        history.applying = true;
+        history.transaction = null;
+        setBlocks(destination);
+        const restoredIds = selectedIds.filter((id) =>
+          destination.some((block) => block.id === id),
+        );
+        setSelectedIds(restoredIds);
+        setPrimarySelectedId(restoredIds.at(-1) ?? null);
+        return;
+      }
       if (hasModifier && key === "c") {
         const selected = blocks.filter((block) => selectedIds.includes(block.id));
         if (selected.length === 0) return;
@@ -2058,21 +2158,23 @@ export default function EditorPage() {
     event.preventDefault();
     event.stopPropagation();
     const additiveSelection = event.shiftKey || event.ctrlKey || event.metaKey;
-    if ((event.ctrlKey || event.metaKey) && selectedIds.includes(block.id)) {
+    const isSelected = selectedIds.includes(block.id);
+    if ((event.ctrlKey || event.metaKey) && isSelected) {
       selectBlock(block.id, true, true);
       return;
     }
-    if (!additiveSelection) {
+    if (!additiveSelection && !isSelected) {
       selectBlock(block.id, false);
-    } else {
+    } else if (additiveSelection && !isSelected) {
       selectBlock(block.id, true);
     }
     const movingIds =
-      additiveSelection && selectedIds.includes(block.id)
+      isSelected
         ? selectedIds
         : additiveSelection
           ? [...selectedIds, block.id]
           : [block.id];
+    blockHistory.current.transaction = blocks;
     event.currentTarget.setPointerCapture(event.pointerId);
     dragState.current = {
       mode: "move",
@@ -2101,6 +2203,7 @@ export default function EditorPage() {
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
     setSelectedId(block.id);
+    blockHistory.current.transaction = blocks;
     dragState.current = {
       mode: "resize",
       id: block.id,
@@ -2134,6 +2237,7 @@ export default function EditorPage() {
       Math.PI;
     event.currentTarget.setPointerCapture(event.pointerId);
     setSelectedId(block.id);
+    blockHistory.current.transaction = blocks;
     dragState.current = {
       mode: "rotate",
       id: block.id,
@@ -2152,8 +2256,26 @@ export default function EditorPage() {
   }
 
   function moveSelected(event: ReactPointerEvent<HTMLElement>) {
-    const drag = dragState.current;
+    const selection = selectionDrag.current;
     const canvas = canvasRef.current;
+    if (selection && selection.pointerId === event.pointerId && canvas) {
+      const bounds = canvas.getBoundingClientRect();
+      const currentX = (event.clientX - bounds.left) / canvasZoom;
+      const currentY = (event.clientY - bounds.top) / canvasZoom;
+      const left = Math.min(selection.startX, currentX);
+      const top = Math.min(selection.startY, currentY);
+      const right = Math.max(selection.startX, currentX);
+      const bottom = Math.max(selection.startY, currentY);
+      setSelectionBox({
+        left,
+        top,
+        width: right - left,
+        height: bottom - top,
+      });
+      return;
+    }
+
+    const drag = dragState.current;
     if (!drag || drag.pointerId !== event.pointerId || !canvas) return;
     const bounds = canvas.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
@@ -2217,8 +2339,54 @@ export default function EditorPage() {
   }
 
   function stopMoving(event: ReactPointerEvent<HTMLElement>) {
+    const selection = selectionDrag.current;
+    const canvas = canvasRef.current;
+    if (selection && selection.pointerId === event.pointerId && canvas) {
+      const bounds = canvas.getBoundingClientRect();
+      const currentX = (event.clientX - bounds.left) / canvasZoom;
+      const currentY = (event.clientY - bounds.top) / canvasZoom;
+      const left = Math.min(selection.startX, currentX);
+      const top = Math.min(selection.startY, currentY);
+      const right = Math.max(selection.startX, currentX);
+      const bottom = Math.max(selection.startY, currentY);
+      const matches = blocks
+        .filter((block) => {
+          const radians = ((block.rotation ?? 0) * Math.PI) / 180;
+          const halfWidth =
+            (Math.abs(Math.cos(radians)) * block.width +
+              Math.abs(Math.sin(radians)) * block.height) /
+            2;
+          const halfHeight =
+            (Math.abs(Math.sin(radians)) * block.width +
+              Math.abs(Math.cos(radians)) * block.height) /
+            2;
+          const centerX = (block.x / 100) * pageWidth;
+          const centerY = (block.y / 100) * pageHeight;
+          return (
+            centerX + halfWidth >= left &&
+            centerX - halfWidth <= right &&
+            centerY + halfHeight >= top &&
+            centerY - halfHeight <= bottom
+          );
+        })
+        .map((block) => block.id);
+      const nextIds = [...new Set([...selection.selectedIds, ...matches])];
+      setSelectedIds(nextIds);
+      setPrimarySelectedId(nextIds.at(-1) ?? null);
+      selectionDrag.current = null;
+      setSelectionBox(null);
+      return;
+    }
     if (dragState.current?.pointerId === event.pointerId) {
       dragState.current = null;
+      const history = blockHistory.current;
+      const transaction = history.transaction;
+      history.transaction = null;
+      if (transaction && history.lastBlocks !== transaction) {
+        history.past.push(transaction);
+        if (history.past.length > 100) history.past.shift();
+        history.future = [];
+      }
     }
   }
 
@@ -2647,11 +2815,7 @@ export default function EditorPage() {
                   ? "border-indigo-400 ring-4 ring-indigo-100"
                   : "border-slate-200"
               }`}
-              onClick={(event) => {
-                if (event.target === event.currentTarget && !previewMode) {
-                  setSelectedId(null);
-                }
-              }}
+              onPointerDown={startCanvasSelection}
               onDragOver={(event) => {
                 event.preventDefault();
                 event.dataTransfer.dropEffect = "copy";
@@ -2667,7 +2831,7 @@ export default function EditorPage() {
               }}
               ref={canvasRef}
               role="region"
-              title="Scroll the mouse wheel to zoom in or out"
+              title="Drag components to move them, or drag empty canvas space to select multiple components. Scroll to zoom."
               style={{
                 backgroundColor: canvasColor,
                 boxSizing: "border-box",
@@ -2771,6 +2935,18 @@ export default function EditorPage() {
               <p className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-sm text-slate-400">
                 Drop a component anywhere to start designing.
               </p>
+            )}
+            {!previewMode && selectionBox && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute z-20 border border-indigo-500 bg-indigo-400/15"
+                style={{
+                  left: selectionBox.left,
+                  top: selectionBox.top,
+                  width: selectionBox.width,
+                  height: selectionBox.height,
+                }}
+              />
             )}
             </div>
           </div>
