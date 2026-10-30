@@ -281,7 +281,7 @@ export function SitePreview({
 
   return (
     <main
-      className="min-h-screen w-full overflow-auto"
+      className="min-h-screen w-full overflow-auto px-6 sm:px-7 lg:px-10"
       style={{ backgroundColor: site.canvas_color }}
     >
       <div
