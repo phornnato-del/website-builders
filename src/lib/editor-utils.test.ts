@@ -10,6 +10,7 @@ import {
   newBlockPosition,
   normalizeSiteSlug,
   safeImageUrl,
+  safeMapUrl,
 } from "./editor-utils";
 
 describe("website URL slugs", () => {
@@ -64,6 +65,29 @@ describe("image URLs", () => {
       expect(safeImageUrl(value)).toBeNull();
     },
   );
+});
+
+describe("map embed URLs", () => {
+  it.each([
+    ["https://www.google.com/maps/embed?pb=example", "https://www.google.com/maps/embed?pb=example"],
+    ["https://www.openstreetmap.org/export/embed.html", "https://www.openstreetmap.org/export/embed.html"],
+    [
+      '<iframe src="https://www.google.com/maps/embed?pb=example&amp;hl=en" width="600" height="450"></iframe>',
+      "https://www.google.com/maps/embed?pb=example&hl=en",
+    ],
+  ])("accepts HTTPS map embed URL %s", (value, expected) => {
+    expect(safeMapUrl(value)).toBe(expected);
+  });
+
+  it.each([
+    "",
+    "http://maps.example.com/embed",
+    "javascript:alert(1)",
+    "//maps.example.com/embed",
+    "https://user:password@maps.example.com/embed",
+  ])("rejects unsafe map embed URL %s", (value) => {
+    expect(safeMapUrl(value)).toBeNull();
+  });
 });
 
 describe("free canvas positioning", () => {

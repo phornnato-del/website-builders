@@ -11,7 +11,7 @@ import type {
   SiteNavItem,
   SitePage,
 } from "@/lib/api";
-import { isSafeLink, safeImageUrl } from "@/lib/editor-utils";
+import { isSafeLink, safeImageUrl, safeMapUrl } from "@/lib/editor-utils";
 
 function navigationItems(block: SiteBlock, pages: SitePage[]): SiteNavItem[] {
   return block.navItems !== undefined && block.navItems !== null
@@ -84,6 +84,26 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
               ▧ {block.text || "Add an image URL"}
             </span>
           )}
+        </div>
+      );
+    }
+    case "map": {
+      const mapUrl = safeMapUrl(block.url);
+      return mapUrl ? (
+        <iframe
+          allowFullScreen
+          className="h-full w-full border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          src={mapUrl}
+          title={block.text || "Map"}
+        />
+      ) : (
+        <div
+          className="grid h-full w-full place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-100 p-4 text-center text-sm text-slate-600"
+          style={{ backgroundColor: block.backgroundColor }}
+        >
+          Map embed unavailable
         </div>
       );
     }

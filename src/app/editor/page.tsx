@@ -34,6 +34,7 @@ import {
   isSafeLink,
   newBlockPosition,
   normalizeSiteSlug,
+  safeMapUrl,
   safeImageUrl,
 } from "@/lib/editor-utils";
 
@@ -61,6 +62,7 @@ const blockLibrary: { type: BlockType; label: string; icon: string }[] = [
   { type: "heading", label: "Heading", icon: "T" },
   { type: "text", label: "Text", icon: "≡" },
   { type: "image", label: "Image", icon: "▧" },
+  { type: "map", label: "Map", icon: "⌖" },
   { type: "carousel", label: "Slideshow", icon: "▤" },
   { type: "button", label: "Button", icon: "▰" },
   { type: "navbar", label: "Navbar", icon: "☰" },
@@ -207,6 +209,15 @@ const blockDefaults: Record<
     height: 180,
     color: "#3730a3",
     backgroundColor: "#e0e7ff",
+    url: "",
+  },
+  map: {
+    type: "map",
+    text: "Map",
+    width: 520,
+    height: 320,
+    color: "#334155",
+    backgroundColor: "#e2e8f0",
     url: "",
   },
   navbar: {
@@ -388,6 +399,30 @@ function renderBlockContent(
               ▧ {block.text || "Add an image URL"}
             </span>
           ) : null}
+        </div>
+      );
+    }
+    case "map": {
+      const mapUrl = safeMapUrl(block.url);
+      return mapUrl ? (
+        <iframe
+          allowFullScreen
+          className={`h-full w-full border-0 ${
+            previewMode ? "" : "pointer-events-none"
+          }`}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          src={mapUrl}
+          title={block.text || "Map"}
+        />
+      ) : (
+        <div
+          className="grid h-full w-full place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-100 p-4 text-center text-sm text-slate-600"
+          style={{ backgroundColor: block.backgroundColor }}
+        >
+          {mapUrl
+            ? "Open Preview to interact with this map."
+            : "Add an HTTPS map embed URL in component settings."}
         </div>
       );
     }
@@ -692,10 +727,16 @@ function LinkControl({
   block: SiteBlock;
   onChange: (value: string) => void;
 }) {
-  const label = block.type === "image" ? "Image URL" : "Link URL";
+  const label = block.type === "image"
+    ? "Image URL"
+    : block.type === "map"
+      ? "Map iframe URL"
+      : "Link URL";
   const valid = block.type === "image"
     ? safeImageUrl(block.url) !== null
-    : isSafeLink(block.url);
+    : block.type === "map"
+      ? safeMapUrl(block.url) !== null
+      : isSafeLink(block.url);
   return (
     <label className="block">
       <span className="mb-2 block text-xs font-medium text-slate-600">
@@ -704,11 +745,18 @@ function LinkControl({
       <input
         autoComplete="url"
         className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50"
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          const value = event.target.value;
+          onChange(
+            block.type === "map" ? safeMapUrl(value) ?? value : value,
+          );
+        }}
         placeholder={
           block.type === "image"
             ? "https://example.com/image.jpg"
-            : "https://example.com or /contact"
+            : block.type === "map"
+              ? "Paste a Google Maps iframe or its HTTPS src URL"
+              : "https://example.com or /contact"
         }
         type="text"
         value={block.url}
@@ -721,10 +769,14 @@ function LinkControl({
         {valid
           ? block.type === "image"
             ? "Image URL is ready to preview."
-            : "Link is ready to use in Preview."
+            : block.type === "map"
+              ? "Map embed URL is ready to preview."
+              : "Link is ready to use in Preview."
           : block.type === "image"
             ? "Enter an absolute http(s) image URL."
-            : "Use an http(s), mailto, tel, or relative URL."}
+            : block.type === "map"
+              ? "Paste iframe code or its HTTPS src URL."
+              : "Use an http(s), mailto, tel, or relative URL."}
       </span>
     </label>
   );
@@ -2536,7 +2588,7 @@ export default function EditorPage() {
                     onChange={updateSelectedRotation}
                     value={selectedBlock.rotation}
                   />
-                  {["button", "card", "image"].includes(selectedBlock.type) && (
+                  {["button", "card", "image", "map"].includes(selectedBlock.type) && (
                     <LinkControl
                       block={selectedBlock}
                       onChange={(value) => updateSelected("url", value)}
@@ -2654,7 +2706,7 @@ export default function EditorPage() {
                   onChange={updateSelectedRotation}
                   value={selectedBlock.rotation}
                 />
-                {["button", "card", "image"].includes(selectedBlock.type) && (
+                {["button", "card", "image", "map"].includes(selectedBlock.type) && (
                   <LinkControl
                     block={selectedBlock}
                     onChange={(value) => updateSelected("url", value)}

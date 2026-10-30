@@ -27,6 +27,20 @@ export function safeImageUrl(value: string): string | null {
   }
 }
 
+export function safeMapUrl(value: string): string | null {
+  const iframe = value.trim().match(/^<iframe\b([^>]*)>/i);
+  const iframeSource = iframe?.[1].match(/\bsrc\s*=\s*(["'])(.*?)\1/i)?.[2];
+  const mapUrl = (iframeSource ?? value.trim()).replace(/&amp;/gi, "&");
+  try {
+    const url = new URL(mapUrl);
+    return url.protocol === "https:" && !url.username && !url.password
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function normalizeSiteSlug(value: string): string {
   return value
     .toLowerCase()

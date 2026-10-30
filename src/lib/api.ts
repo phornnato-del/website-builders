@@ -17,6 +17,7 @@ export type SiteBlock = {
     | "heading"
     | "text"
     | "image"
+    | "map"
     | "button"
     | "navbar"
     | "card"
