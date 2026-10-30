@@ -240,11 +240,14 @@ export function SitePreview({
   pageSlug?: string;
 }) {
   const [scale, setScale] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const updateScale = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
       setScale(
-        window.innerWidth >= 768 ? window.innerWidth / site.page_width : 1,
+        mobile ? 1 : window.innerWidth / site.page_width,
       );
     };
 
@@ -287,13 +290,22 @@ export function SitePreview({
         style={{
           backgroundColor: site.canvas_color,
           boxSizing: "border-box",
-          maxWidth: "100%",
+          display: isMobile ? "grid" : undefined,
+          gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : undefined,
+          justifyItems: isMobile ? "center" : undefined,
+          alignContent: isMobile ? "start" : undefined,
+          gap: isMobile ? "1.25rem" : undefined,
+          width: isMobile ? "100%" : undefined,
+          maxWidth: isMobile ? "100%" : "100%",
+          padding: isMobile ? "1.25rem 1rem" : undefined,
           minHeight: `max(100vh, ${site.page_height * scale}px)`,
         }}
       >
         {pageBlocks.map((block, index) => (
           <div
-            className={`published-site-block absolute -translate-x-1/2 -translate-y-1/2 ${
+            className={`published-site-block published-site-block-${block.type} ${
+              isMobile ? "" : "absolute -translate-x-1/2 -translate-y-1/2"
+            } ${
               site.animation !== "none"
                 ? `site-animation-block site-animation-${site.animation}`
                 : ""
@@ -301,12 +313,35 @@ export function SitePreview({
             key={block.id}
             style={
               {
-                left: `${block.x}%`,
-                top: `${block.y}%`,
-                transform: `rotate(${block.rotation ?? 0}deg)`,
-                width: `${block.width * scale}px`,
-                height: `${block.height * scale}px`,
-                maxWidth: "94%",
+                position: isMobile ? "relative" : undefined,
+                inset: isMobile ? "auto" : undefined,
+                left: isMobile ? "auto" : `${block.x}%`,
+                top: isMobile ? "auto" : `${block.y}%`,
+                transform: isMobile ? "none" : `rotate(${block.rotation ?? 0}deg)`,
+                translate: isMobile ? "none" : undefined,
+                width: isMobile ? "min(100%, 720px)" : `${block.width * scale}px`,
+                height: isMobile ? "auto" : `${block.height * scale}px`,
+                minHeight: isMobile
+                  ? block.type === "image" || block.type === "map" || block.type === "carousel"
+                    ? "11rem"
+                    : block.type === "card"
+                      ? "10rem"
+                      : block.type === "section"
+                        ? "8rem"
+                        : block.type === "navbar" || block.type === "button" || block.type === "footer"
+                          ? "3.5rem"
+                          : block.type === "container"
+                            ? "5rem"
+                            : block.type === "divider"
+                              ? "1.5rem"
+                              : undefined
+                  : undefined,
+                maxWidth: isMobile ? "100%" : "94%",
+                justifySelf: isMobile ? "center" : undefined,
+                marginInline: isMobile ? "auto" : undefined,
+                aspectRatio: isMobile && ["image", "map", "carousel"].includes(block.type)
+                  ? "16 / 9"
+                  : undefined,
                 "--published-block-width": `${block.width * scale}px`,
                 "--published-block-height": `${block.height * scale}px`,
                 animationDelay: `${Math.min(index * 80, 800)}ms`,
