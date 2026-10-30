@@ -42,6 +42,13 @@ import {
 
 type BlockType = SiteBlock["type"];
 type Viewport = "desktop" | "mobile" | "custom";
+type EditorDraft = {
+  version: 1;
+  siteSlug: string;
+  activePageSlug: string;
+  viewport: Viewport;
+  design: SiteDesign;
+};
 type DragState = {
   mode: "move" | "resize" | "rotate";
   id: string;
@@ -83,6 +90,66 @@ const blockLibrary: { type: BlockType; label: string; icon: string }[] = [
   { type: "footer", label: "Footer", icon: "▂" },
   { type: "circle", label: "Circle", icon: "◯" },
 ];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSiteBlock(value: unknown): value is SiteBlock {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === "string" &&
+    typeof value.type === "string" &&
+    blockLibrary.some((block) => block.type === value.type) &&
+    typeof value.text === "string" &&
+    typeof value.x === "number" &&
+    typeof value.y === "number" &&
+    typeof value.width === "number" &&
+    typeof value.height === "number" &&
+    typeof value.color === "string" &&
+    typeof value.backgroundColor === "string" &&
+    typeof value.url === "string" &&
+    (value.images === undefined ||
+      (Array.isArray(value.images) &&
+        value.images.every((image) => typeof image === "string"))) &&
+    (value.navItems === undefined ||
+      value.navItems === null ||
+      (Array.isArray(value.navItems) &&
+        value.navItems.every(
+          (item) =>
+            isRecord(item) &&
+            typeof item.label === "string" &&
+            typeof item.pageSlug === "string",
+        )))
+  );
+}
+
+function isEditorDraft(value: unknown): value is EditorDraft {
+  if (!isRecord(value) || !isRecord(value.design)) return false;
+  const { design } = value;
+  return (
+    value.version === 1 &&
+    typeof value.siteSlug === "string" &&
+    typeof value.activePageSlug === "string" &&
+    ["desktop", "mobile", "custom"].includes(String(value.viewport)) &&
+    Array.isArray(design.blocks) &&
+    design.blocks.every(isSiteBlock) &&
+    Array.isArray(design.pages) &&
+    design.pages.every(
+      (page) =>
+        isRecord(page) &&
+        typeof page.id === "string" &&
+        typeof page.slug === "string" &&
+        typeof page.title === "string" &&
+        Array.isArray(page.blocks) &&
+        page.blocks.every(isSiteBlock),
+    ) &&
+    typeof design.page_width === "number" &&
+    typeof design.page_height === "number" &&
+    typeof design.canvas_color === "string" &&
+    ["none", "fade", "rise", "zoom"].includes(String(design.animation))
+  );
+}
 
 type WebsiteSectionBlock = {
   type: BlockType;
@@ -1000,10 +1067,10 @@ function LinkControl({
       >
         {valid
           ? block.type === "image" || block.type === "imageCard"
-            ? "Image URL is ready to preview."
+            ? "Image will display on your published site."
             : block.type === "map"
-              ? "Map embed URL is ready to preview."
-              : "Link is ready to use in Preview."
+              ? "Map will display on your published site."
+              : "Link will work on your published site."
           : block.type === "image" || block.type === "imageCard"
             ? "Enter an absolute http(s) image URL."
             : block.type === "map"
@@ -1384,6 +1451,7 @@ export default function EditorPage() {
   const componentClipboard = useRef<SiteBlock[]>([]);
   const pasteCount = useRef(0);
   const [user, setUser] = useState<User | null>(null);
+  const [draftOwnerId, setDraftOwnerId] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
   const [authError, setAuthError] = useState("");
   const [blocks, setBlocks] = useState(initialBlocks);
@@ -1407,13 +1475,15 @@ export default function EditorPage() {
   const [canvasZoom, setCanvasZoom] = useState(1);
   const [fitCanvasToWidth, setFitCanvasToWidth] = useState(true);
   const [activeDrag, setActiveDrag] = useState<BlockType | null>(null);
-  const [previewMode, setPreviewMode] = useState(false);
+  const previewMode = false;
   const [logoutPending, setLogoutPending] = useState(false);
   const [siteSlug, setSiteSlug] = useState("my-site");
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
+  const [draftStatus, setDraftStatus] = useState("Draft saved in this browser");
+  const [draftError, setDraftError] = useState("");
 
   function setSelectedId(id: string | null) {
     setPrimarySelectedId(id);
@@ -1677,7 +1747,6 @@ export default function EditorPage() {
     setActivePageSlug(slug);
     setBlocks(newPage.blocks);
     setSelectedId(null);
-    setPreviewMode(false);
   }
 
   function removeCurrentPage() {
@@ -1881,6 +1950,119 @@ export default function EditorPage() {
       active = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    if (!user) return;
+    const storageKey = `webbuilder:draft:${user.id}`;
+    const timeout = window.setTimeout(() => {
+      try {
+        const savedDraft = window.localStorage.getItem(storageKey);
+        if (savedDraft) {
+          const parsed: unknown = JSON.parse(savedDraft);
+          if (!isEditorDraft(parsed)) {
+            throw new Error("The saved browser draft has an invalid format.");
+          }
+          const homePage = parsed.design.pages.find((page) => page.slug === "home");
+          const activePage =
+            parsed.design.pages.find(
+              (page) => page.slug === parsed.activePageSlug,
+            ) ?? homePage;
+          if (!homePage || !activePage) {
+            throw new Error("The saved browser draft is missing its Home page.");
+          }
+          setSitePages(parsed.design.pages);
+          setActivePageSlug(activePage.slug);
+          setBlocks(activePage.blocks);
+          setSiteSlug(parsed.siteSlug);
+          setPageWidth(parsed.design.page_width);
+          setPageHeight(parsed.design.page_height);
+          setCanvasColor(parsed.design.canvas_color);
+          setSiteAnimation(parsed.design.animation);
+          setViewport(parsed.viewport);
+          setSelectedId(null);
+          blockHistory.current = {
+            past: [],
+            future: [],
+            lastBlocks: activePage.blocks,
+            applying: false,
+            transaction: null,
+          };
+          historyPage.current = activePage.slug;
+          setDraftStatus("Draft restored from this browser");
+        } else {
+          setDraftStatus("Draft saved in this browser");
+        }
+        setDraftError("");
+      } catch (error) {
+        setDraftError(
+          error instanceof Error
+            ? error.message
+            : "Could not read your browser draft.",
+        );
+      } finally {
+        setDraftOwnerId(user.id);
+      }
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || draftOwnerId !== user.id) return;
+    const storageKey = `webbuilder:draft:${user.id}`;
+    const persistDraft = () => {
+      const pages = sitePages.map((page) =>
+        page.slug === activePageSlug ? { ...page, blocks } : page,
+      );
+      const homePage = pages.find((page) => page.slug === "home");
+      if (!homePage) {
+        setDraftError("Could not save your draft because the Home page is missing.");
+        return;
+      }
+      const draft: EditorDraft = {
+        version: 1,
+        siteSlug,
+        activePageSlug,
+        viewport,
+        design: {
+          blocks: homePage.blocks,
+          pages,
+          page_width: pageWidth,
+          page_height: pageHeight,
+          canvas_color: canvasColor,
+          animation: siteAnimation,
+        },
+      };
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(draft));
+        setDraftStatus("Draft saved in this browser");
+        setDraftError("");
+      } catch (error) {
+        setDraftError(
+          error instanceof Error
+            ? `Could not save your browser draft: ${error.message}`
+            : "Could not save your browser draft.",
+        );
+      }
+    };
+    const timeout = window.setTimeout(persistDraft, 200);
+    window.addEventListener("pagehide", persistDraft);
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener("pagehide", persistDraft);
+    };
+  }, [
+    activePageSlug,
+    blocks,
+    canvasColor,
+    draftOwnerId,
+    pageHeight,
+    pageWidth,
+    siteAnimation,
+    sitePages,
+    siteSlug,
+    user,
+    viewport,
+  ]);
 
   async function handleLogout() {
     setLogoutPending(true);
@@ -2458,9 +2640,9 @@ export default function EditorPage() {
             <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-indigo-300">WEBBUILDER STUDIO</p>
             <h1 className="mt-0.5 truncate text-sm font-semibold tracking-tight text-white">My first website</h1>
           </div>
-          <span className="hidden items-center gap-1.5 rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] font-medium text-amber-200 sm:flex">
-            <span className="size-1.5 rounded-full bg-amber-300" />
-            Unsaved draft
+          <span className="hidden items-center gap-1.5 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-medium text-emerald-200 sm:flex">
+            <span className="size-1.5 rounded-full bg-emerald-300" />
+            {draftOwnerId === user.id ? draftStatus : "Restoring browser draft"}
           </span>
         </div>
 
@@ -2483,18 +2665,6 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            aria-pressed={previewMode}
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-              previewMode
-                ? "bg-indigo-500/15 text-indigo-200"
-                : "border border-white/15 text-slate-200 hover:bg-white/10"
-            }`}
-            onClick={() => setPreviewMode((current) => !current)}
-            type="button"
-          >
-            {previewMode ? "Exit preview" : "Preview"}
-          </button>
           <span className="hidden max-w-36 truncate text-sm text-slate-300 lg:block">
             {user.email}
           </span>
@@ -2576,6 +2746,16 @@ export default function EditorPage() {
           role="alert"
         >
           {publishError}
+        </p>
+      )}
+
+      {draftError && (
+        <p
+          aria-live="polite"
+          className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-800"
+          role="alert"
+        >
+          {draftError}
         </p>
       )}
 
