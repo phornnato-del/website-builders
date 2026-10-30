@@ -8,11 +8,13 @@ import {
   useRef,
   useState,
 } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import {
   ApiError,
   getCurrentUser,
+  getSite,
   logout,
   saveSite,
   SiteDesign,
@@ -1954,31 +1956,40 @@ export default function EditorPage() {
   useEffect(() => {
     if (!user) return;
     const storageKey = `webbuilder:draft:${user.id}`;
-    const timeout = window.setTimeout(() => {
+    let active = true;
+    const timeout = window.setTimeout(async () => {
+      let loaded = false;
       try {
         const savedDraft = window.localStorage.getItem(storageKey);
-        if (savedDraft) {
-          const parsed: unknown = JSON.parse(savedDraft);
-          if (!isEditorDraft(parsed)) {
-            throw new Error("The saved browser draft has an invalid format.");
-          }
-          const homePage = parsed.design.pages.find((page) => page.slug === "home");
+        const requestedSlug = new URLSearchParams(window.location.search).get("site");
+        const parsed: unknown = savedDraft ? JSON.parse(savedDraft) : null;
+        const storedDraft =
+          parsed !== null && isEditorDraft(parsed) ? parsed : null;
+        if (parsed !== null && !storedDraft) {
+          throw new Error("The saved browser draft has an invalid format.");
+        }
+        if (
+          storedDraft &&
+          (!requestedSlug || storedDraft.siteSlug === requestedSlug)
+        ) {
+          const draft = storedDraft;
+          const homePage = draft.design.pages.find((page) => page.slug === "home");
           const activePage =
-            parsed.design.pages.find(
-              (page) => page.slug === parsed.activePageSlug,
+            draft.design.pages.find(
+              (page) => page.slug === draft.activePageSlug,
             ) ?? homePage;
           if (!homePage || !activePage) {
             throw new Error("The saved browser draft is missing its Home page.");
           }
-          setSitePages(parsed.design.pages);
+          setSitePages(draft.design.pages);
           setActivePageSlug(activePage.slug);
           setBlocks(activePage.blocks);
-          setSiteSlug(parsed.siteSlug);
-          setPageWidth(parsed.design.page_width);
-          setPageHeight(parsed.design.page_height);
-          setCanvasColor(parsed.design.canvas_color);
-          setSiteAnimation(parsed.design.animation);
-          setViewport(parsed.viewport);
+          setSiteSlug(draft.siteSlug);
+          setPageWidth(draft.design.page_width);
+          setPageHeight(draft.design.page_height);
+          setCanvasColor(draft.design.canvas_color);
+          setSiteAnimation(draft.design.animation);
+          setViewport(draft.viewport);
           setSelectedId(null);
           blockHistory.current = {
             past: [],
@@ -1989,8 +2000,37 @@ export default function EditorPage() {
           };
           historyPage.current = activePage.slug;
           setDraftStatus("Draft restored from this browser");
+          loaded = true;
+        } else if (requestedSlug) {
+          const savedSite = await getSite(requestedSlug);
+          if (!active) return;
+          const pages =
+            savedSite.pages.length > 0
+              ? savedSite.pages
+              : [{ ...initialPages[0], blocks: savedSite.blocks }];
+          const homePage = pages.find((page) => page.slug === "home") ?? pages[0];
+          setSitePages(pages);
+          setActivePageSlug(homePage.slug);
+          setBlocks(homePage.blocks);
+          setSiteSlug(savedSite.slug);
+          setPageWidth(savedSite.page_width);
+          setPageHeight(savedSite.page_height);
+          setCanvasColor(savedSite.canvas_color);
+          setSiteAnimation(savedSite.animation);
+          setSelectedId(null);
+          blockHistory.current = {
+            past: [],
+            future: [],
+            lastBlocks: homePage.blocks,
+            applying: false,
+            transaction: null,
+          };
+          historyPage.current = homePage.slug;
+          setDraftStatus("Saved website loaded for editing");
+          loaded = true;
         } else {
           setDraftStatus("Draft saved in this browser");
+          loaded = true;
         }
         setDraftError("");
       } catch (error) {
@@ -2000,10 +2040,13 @@ export default function EditorPage() {
             : "Could not read your browser draft.",
         );
       } finally {
-        setDraftOwnerId(user.id);
+        if (active && loaded) setDraftOwnerId(user.id);
       }
     }, 0);
-    return () => window.clearTimeout(timeout);
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -2665,6 +2708,12 @@ export default function EditorPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            className="rounded-lg border border-white/15 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+            href="/dashboard"
+          >
+            My websites
+          </Link>
           <span className="hidden max-w-36 truncate text-sm text-slate-300 lg:block">
             {user.email}
           </span>

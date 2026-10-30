@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, apiRequest } from "./api";
+import { ApiError, apiRequest, deleteSite, getOwnedSites } from "./api";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -48,6 +48,38 @@ describe("API error details", () => {
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/auth/me",
         expect.objectContaining({ credentials: "include" }),
+      );
+    });
+
+    it("requests the signed-in user's website history from the API root", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      await expect(getOwnedSites()).resolves.toEqual([]);
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/sites/",
+        expect.objectContaining({ credentials: "include" }),
+      );
+    });
+
+    it("deletes a site using the csrf token", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(null, { status: 204 }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      await expect(deleteSite("my-site", "csrf-token")).resolves.toBeUndefined();
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/sites/my-site",
+        expect.objectContaining({
+          method: "DELETE",
+          headers: expect.objectContaining({ "X-CSRF-Token": "csrf-token" }),
+        }),
       );
     });
   });

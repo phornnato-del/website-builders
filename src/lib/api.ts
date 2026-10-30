@@ -185,6 +185,20 @@ export async function getSite(slug: string): Promise<PublishedSite> {
   return apiRequest<PublishedSite>(`/api/sites/${encodeURIComponent(slug)}`);
 }
 
+export async function getOwnedSites(): Promise<PublishedSite[]> {
+  return apiRequest<PublishedSite[]>("/api/sites/");
+}
+
+export async function deleteSite(
+  slug: string,
+  csrfToken: string,
+): Promise<void> {
+  await apiRequest<void>(`/api/sites/${encodeURIComponent(slug)}`, {
+    method: "DELETE",
+    headers: { "X-CSRF-Token": csrfToken },
+  });
+}
+
 export async function uploadSiteImage(
   file: File,
   csrfToken: string,

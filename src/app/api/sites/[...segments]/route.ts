@@ -9,3 +9,4 @@ async function proxy(request: Request, context: RouteContext) {
 
 export const GET = proxy;
 export const PUT = proxy;
+export const DELETE = proxy;
