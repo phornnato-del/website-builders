@@ -18,6 +18,7 @@ import {
   SiteDesign,
   SiteAnimation,
   SiteBlock,
+  SiteFontFamily,
   SiteNavItem,
   SitePage,
   uploadSiteImage,
@@ -36,6 +37,7 @@ import {
   normalizeSiteSlug,
   safeMapUrl,
   safeImageUrl,
+  siteFontFamilyCss,
 } from "@/lib/editor-utils";
 
 type BlockType = SiteBlock["type"];
@@ -67,12 +69,135 @@ const blockLibrary: { type: BlockType; label: string; icon: string }[] = [
   { type: "button", label: "Button", icon: "▰" },
   { type: "navbar", label: "Navbar", icon: "☰" },
   { type: "card", label: "Card", icon: "▤" },
+  { type: "imageCard", label: "Image Card", icon: "▧" },
   { type: "columns", label: "Columns", icon: "▥" },
   { type: "spacer", label: "Spacer", icon: "↕" },
   { type: "divider", label: "Divider", icon: "━" },
   { type: "footer", label: "Footer", icon: "▂" },
   { type: "circle", label: "Circle", icon: "◯" },
 ];
+
+type WebsiteSectionBlock = {
+  type: BlockType;
+  text: string;
+  xOffset: number;
+  yOffset: number;
+  width: number;
+  height: number;
+  backgroundColor?: string;
+  url?: string;
+};
+
+const websiteSections: {
+  label: string;
+  blocks: WebsiteSectionBlock[];
+}[] = [
+  {
+    label: "Navbar",
+    blocks: [{ type: "navbar", text: "Your brand", xOffset: 0, yOffset: 0, width: 1080, height: 72 }],
+  },
+  {
+    label: "Hero Section",
+    blocks: [
+      { type: "heading", text: "A bold headline goes here", xOffset: 0, yOffset: 0, width: 820, height: 110 },
+      { type: "text", text: "Tell visitors what makes your idea worth exploring.", xOffset: 0, yOffset: 9, width: 700, height: 80 },
+      { type: "button", text: "Get started", xOffset: 0, yOffset: 17, width: 200, height: 58, url: "#contact" },
+    ],
+  },
+  {
+    label: "About Us",
+    blocks: [
+      { type: "heading", text: "About us", xOffset: 0, yOffset: 0, width: 700, height: 90 },
+      { type: "text", text: "Share your story, your mission, and what makes your team different.", xOffset: 0, yOffset: 9, width: 760, height: 110 },
+    ],
+  },
+  {
+    label: "Services",
+    blocks: [
+      { type: "heading", text: "Our services", xOffset: 0, yOffset: 0, width: 700, height: 90 },
+      { type: "card", text: "Service one\nDescribe how you help your customers.", xOffset: -28, yOffset: 12, width: 280, height: 190 },
+      { type: "card", text: "Service two\nDescribe another way you can help.", xOffset: 0, yOffset: 12, width: 280, height: 190 },
+      { type: "card", text: "Service three\nHighlight another useful service.", xOffset: 28, yOffset: 12, width: 280, height: 190 },
+    ],
+  },
+  {
+    label: "Features",
+    blocks: [
+      { type: "heading", text: "Why choose us", xOffset: 0, yOffset: 0, width: 700, height: 90 },
+      { type: "columns", text: "Easy to use\nMade for you\nHere when you need us", xOffset: 0, yOffset: 12, width: 900, height: 190 },
+    ],
+  },
+  {
+    label: "Pricing",
+    blocks: [
+      { type: "heading", text: "Simple, clear pricing", xOffset: 0, yOffset: 0, width: 760, height: 90 },
+      { type: "card", text: "Basic\nA great place to start.\n$9 / month", xOffset: -28, yOffset: 12, width: 280, height: 220 },
+      { type: "card", text: "Popular\nEverything you need to grow.\n$19 / month", xOffset: 0, yOffset: 12, width: 280, height: 220 },
+      { type: "card", text: "Pro\nMore power for your team.\n$39 / month", xOffset: 28, yOffset: 12, width: 280, height: 220 },
+    ],
+  },
+  {
+    label: "Testimonials",
+    blocks: [
+      { type: "heading", text: "What our customers say", xOffset: 0, yOffset: 0, width: 820, height: 90 },
+      { type: "card", text: "“A wonderful experience.”\nCustomer Name", xOffset: -16, yOffset: 12, width: 360, height: 180 },
+      { type: "card", text: "“They made everything simple.”\nCustomer Name", xOffset: 16, yOffset: 12, width: 360, height: 180 },
+    ],
+  },
+  {
+    label: "FAQ",
+    blocks: [
+      { type: "heading", text: "Frequently asked questions", xOffset: 0, yOffset: 0, width: 820, height: 90 },
+      { type: "card", text: "How does it work?\nAdd an answer to a common question.", xOffset: 0, yOffset: 11, width: 680, height: 150 },
+      { type: "card", text: "How can I get started?\nTell visitors what to do next.", xOffset: 0, yOffset: 21, width: 680, height: 150 },
+    ],
+  },
+  {
+    label: "Contact Us",
+    blocks: [
+      { type: "heading", text: "Let’s talk", xOffset: 0, yOffset: 0, width: 700, height: 90 },
+      { type: "text", text: "Have a question? We’d love to hear from you.", xOffset: 0, yOffset: 9, width: 700, height: 70 },
+      { type: "button", text: "Contact us", xOffset: 0, yOffset: 17, width: 200, height: 58, url: "mailto:hello@example.com" },
+    ],
+  },
+  {
+    label: "Footer",
+    blocks: [{ type: "footer", text: "© 2026 Your brand. All rights reserved.", xOffset: 0, yOffset: 0, width: 1080, height: 72 }],
+  },
+];
+
+function WebsiteSectionLibrary({
+  onAdd,
+}: {
+  onAdd: (section: (typeof websiteSections)[number]) => void;
+}) {
+  return (
+    <section className="mb-6 rounded-2xl border border-white/10 bg-black p-3 text-white">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <span aria-hidden="true" className="text-blue-400">▦</span>
+          Website Sections
+        </h3>
+        <span className="rounded-full bg-emerald-950 px-2 py-1 text-[10px] font-medium text-emerald-400">
+          Essential
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-1">
+        {websiteSections.map((section) => (
+          <button
+            className="flex min-h-[62px] flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-center text-[11px] font-medium text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+            key={section.label}
+            onClick={() => onAdd(section)}
+            type="button"
+          >
+            <span aria-hidden="true" className="text-sm">▰</span>
+            {section.label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 const initialPages: SitePage[] = [
   { id: "home", slug: "home", title: "Home", blocks: [] },
@@ -238,6 +363,15 @@ const blockDefaults: Record<
     backgroundColor: "#ffffff",
     url: "",
   },
+  imageCard: {
+    type: "imageCard",
+    text: "Card title\nAdd a short description for this card.",
+    width: 320,
+    height: 300,
+    color: "#1e293b",
+    backgroundColor: "#ffffff",
+    url: "",
+  },
   columns: {
     type: "columns",
     text: "First column\nSecond column\nThird column",
@@ -337,10 +471,15 @@ function renderBlockContent(
   pages: SitePage[],
   onNavigate: (pageSlug: string) => void,
 ) {
-  const textColor = { color: block.color };
+  const fontStyle = {
+    fontFamily: siteFontFamilyCss(block.fontFamily),
+    fontSize: `${block.fontSize ?? 16}px`,
+  };
+  const textColor = { color: block.color, ...fontStyle };
   const fill = {
     color: block.color,
     backgroundColor: block.backgroundColor,
+    ...fontStyle,
   };
 
   switch (block.type) {
@@ -350,7 +489,7 @@ function renderBlockContent(
           className="h-full w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-lg shadow-slate-900/5"
           style={fill}
         >
-          <span className="text-sm font-medium">{block.text || "Container"}</span>
+          <span className="text-sm font-medium" style={fontStyle}>{block.text || "Container"}</span>
         </div>
       );
     case "section":
@@ -359,7 +498,7 @@ function renderBlockContent(
           className="grid h-full w-full place-items-center overflow-hidden rounded-3xl border border-white/80 p-6 text-center shadow-lg shadow-slate-900/5"
           style={fill}
         >
-          <span className="text-xl font-semibold tracking-tight sm:text-2xl">
+          <span className="text-xl font-semibold tracking-tight sm:text-2xl" style={fontStyle}>
             {block.text || "Section"}
           </span>
         </section>
@@ -395,11 +534,40 @@ function renderBlockContent(
           }}
         >
           {!imageUrl ? (
-            <span className="rounded-lg bg-white/80 px-3 py-2">
+            <span className="rounded-lg bg-white/80 px-3 py-2" style={fontStyle}>
               ▧ {block.text || "Add an image URL"}
             </span>
           ) : null}
         </div>
+      );
+    }
+    case "imageCard": {
+      const imageUrl = safeImageUrl(block.url);
+      const [title, ...description] = block.text.split("\n");
+      return (
+        <article className="h-full w-full overflow-hidden rounded-3xl border border-slate-200/80 shadow-xl shadow-slate-900/10" style={fill}>
+          <div
+            aria-label={imageUrl ? title || "Card image" : undefined}
+            className="h-1/2 min-h-24 w-full bg-cover bg-center"
+            role={imageUrl ? "img" : undefined}
+            style={{
+              backgroundColor: "#e0e7ff",
+              backgroundImage: imageUrl ? `url("${imageUrl}")` : undefined,
+            }}
+          >
+            {!imageUrl && (
+              <span className="grid h-full place-items-center text-sm text-indigo-700" style={fontStyle}>
+                ▧ Add a card image
+              </span>
+            )}
+          </div>
+          <div className="p-5">
+            <h3 className="font-semibold" style={fontStyle}>{title || "Card title"}</h3>
+            <p className="mt-2 whitespace-pre-line text-sm leading-6 opacity-80" style={fontStyle}>
+              {description.join("\n") || "Add a short description for this card."}
+            </p>
+          </div>
+        </article>
       );
     }
     case "map": {
@@ -418,7 +586,7 @@ function renderBlockContent(
       ) : (
         <div
           className="grid h-full w-full place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-100 p-4 text-center text-sm text-slate-600"
-          style={{ backgroundColor: block.backgroundColor }}
+          style={{ backgroundColor: block.backgroundColor, ...fontStyle }}
         >
           {mapUrl
             ? "Open Preview to interact with this map."
@@ -457,11 +625,12 @@ function renderBlockContent(
           className="flex h-full w-full items-center justify-between gap-3 overflow-hidden rounded-2xl border border-white/80 px-5 shadow-lg shadow-slate-900/5 backdrop-blur"
           style={fill}
         >
-          <span className="shrink-0 truncate font-semibold">{block.text}</span>
+          <span className="shrink-0 truncate font-semibold" style={fontStyle}>{block.text}</span>
           <div className="flex min-w-0 items-center gap-3 text-xs">
             {navItems.map((item) => (
               <a
                 className="truncate hover:text-indigo-600"
+                style={fontStyle}
                 href={previewMode ? `#${item.pageSlug}` : "#"}
                 key={`${item.pageSlug}-${item.label}`}
                 onClick={(event) => {
@@ -483,8 +652,8 @@ function renderBlockContent(
           className="flex h-full w-full flex-col justify-center overflow-hidden rounded-3xl border border-slate-200/80 p-6 text-left shadow-xl shadow-slate-900/5"
           style={fill}
         >
-          <h3 className="text-lg font-semibold">{title || "Card title"}</h3>
-          <p className="mt-2 overflow-hidden text-sm leading-6 opacity-80">
+          <h3 className="text-lg font-semibold" style={fontStyle}>{title || "Card title"}</h3>
+          <p className="mt-2 overflow-hidden text-sm leading-6 opacity-80" style={fontStyle}>
             {description.join("\n") || "Add a short card description."}
           </p>
           {isSafeLink(block.url) && previewMode && (
@@ -492,6 +661,7 @@ function renderBlockContent(
               className="mt-3 text-sm font-medium text-indigo-600 hover:underline"
               href={block.url}
               rel={block.url.startsWith("http") ? "noopener noreferrer" : undefined}
+              style={fontStyle}
             >
               Learn more
             </a>
@@ -509,6 +679,7 @@ function renderBlockContent(
           {[0, 1, 2].map((index) => (
             <div
               className="flex min-w-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-white/85 p-2 text-center text-xs font-medium shadow-sm sm:p-4 sm:text-sm"
+              style={fontStyle}
               key={index}
             >
               {columns[index] || `Column ${index + 1}`}
@@ -519,7 +690,8 @@ function renderBlockContent(
     }
     case "spacer":
       return previewMode ? null : (
-        <div className="grid h-full w-full place-items-center border border-dashed border-indigo-300 bg-indigo-50/40 text-[10px] text-indigo-500">
+        <div         className="grid h-full w-full place-items-center border border-dashed border-indigo-300 bg-indigo-50/40 text-[10px] text-indigo-500"
+        style={fontStyle}>
           Spacer
         </div>
       );
@@ -554,6 +726,8 @@ function renderBlockContent(
       return (
         <ImageCarousel
           backgroundColor={block.backgroundColor}
+          fontFamily={fontStyle.fontFamily}
+          fontSize={fontStyle.fontSize}
           images={block.images ?? []}
           label={block.text}
         />
@@ -644,6 +818,57 @@ function ColorControl({
   );
 }
 
+function FontControls({
+  fontFamily,
+  fontSize,
+  onFontFamilyChange,
+  onFontSizeChange,
+}: {
+  fontFamily: SiteFontFamily;
+  fontSize: number;
+  onFontFamilyChange: (value: SiteFontFamily) => void;
+  onFontSizeChange: (value: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <label className="block">
+        <span className="mb-2 block text-xs font-medium text-slate-600">
+          Font
+        </span>
+        <select
+          aria-label="Font family"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50"
+          onChange={(event) =>
+            onFontFamilyChange(event.target.value as SiteFontFamily)
+          }
+          value={fontFamily}
+        >
+          <option value="Arial">Arial</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Trebuchet MS">Trebuchet MS</option>
+        </select>
+      </label>
+      <label className="block">
+        <span className="mb-2 block text-xs font-medium text-slate-600">
+          Font size (px)
+        </span>
+        <input
+          aria-label="Font size"
+          className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50"
+          max={96}
+          min={8}
+          onChange={(event) => onFontSizeChange(Number(event.target.value))}
+          type="number"
+          value={fontSize}
+        />
+      </label>
+    </div>
+  );
+}
+
 function SizeControls({
   width,
   height,
@@ -727,12 +952,12 @@ function LinkControl({
   block: SiteBlock;
   onChange: (value: string) => void;
 }) {
-  const label = block.type === "image"
-    ? "Image URL"
+  const label = block.type === "image" || block.type === "imageCard"
+    ? block.type === "imageCard" ? "Card image URL" : "Image URL"
     : block.type === "map"
       ? "Map iframe URL"
       : "Link URL";
-  const valid = block.type === "image"
+  const valid = block.type === "image" || block.type === "imageCard"
     ? safeImageUrl(block.url) !== null
     : block.type === "map"
       ? safeMapUrl(block.url) !== null
@@ -752,7 +977,7 @@ function LinkControl({
           );
         }}
         placeholder={
-          block.type === "image"
+          block.type === "image" || block.type === "imageCard"
             ? "https://example.com/image.jpg"
             : block.type === "map"
               ? "Paste a Google Maps iframe or its HTTPS src URL"
@@ -767,12 +992,12 @@ function LinkControl({
         }`}
       >
         {valid
-          ? block.type === "image"
+          ? block.type === "image" || block.type === "imageCard"
             ? "Image URL is ready to preview."
             : block.type === "map"
               ? "Map embed URL is ready to preview."
               : "Link is ready to use in Preview."
-          : block.type === "image"
+          : block.type === "image" || block.type === "imageCard"
             ? "Enter an absolute http(s) image URL."
             : block.type === "map"
               ? "Paste iframe code or its HTTPS src URL."
@@ -1588,6 +1813,32 @@ export default function EditorPage() {
     setSelectedId(block.id);
   }
 
+  function addWebsiteSection(section: (typeof websiteSections)[number]) {
+    const position = newBlockPosition(
+      blocks.length,
+      activePageSlug === "home" ? initialBlocks.length : 0,
+    );
+    const addedBlocks: SiteBlock[] = section.blocks.map((spec) => {
+      const defaults = blockDefaults[spec.type];
+      return {
+        ...defaults,
+        id: crypto.randomUUID(),
+        type: spec.type,
+        text: spec.text,
+        x: clampCanvasPercent(50 + spec.xOffset),
+        y: clampCanvasPercent(position.y + spec.yOffset),
+        width: spec.width,
+        height: spec.height,
+        color: defaults.color,
+        backgroundColor: spec.backgroundColor ?? defaults.backgroundColor,
+        url: spec.url ?? defaults.url,
+      };
+    });
+
+    setBlocks((current) => [...current, ...addedBlocks]);
+    setSelectedId(addedBlocks[0]?.id ?? null);
+  }
+
   function canvasPosition(clientX: number, clientY: number) {
     const bounds = canvasRef.current?.getBoundingClientRect();
     return bounds
@@ -1615,6 +1866,26 @@ export default function EditorPage() {
     setBlocks((current) =>
       current.map((block) =>
         block.id === selectedId ? { ...block, [field]: value } : block,
+      ),
+    );
+  }
+
+  function updateSelectedFontFamily(fontFamily: SiteFontFamily) {
+    setBlocks((current) =>
+      current.map((block) =>
+        block.id === selectedId ? { ...block, fontFamily } : block,
+      ),
+    );
+  }
+
+  function updateSelectedFontSize(fontSize: number) {
+    if (!Number.isFinite(fontSize)) return;
+    const boundedFontSize = Math.min(96, Math.max(8, Math.round(fontSize)));
+    setBlocks((current) =>
+      current.map((block) =>
+        block.id === selectedId
+          ? { ...block, fontSize: boundedFontSize }
+          : block,
       ),
     );
   }
@@ -2209,6 +2480,9 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
+            <div className="mt-5">
+              <WebsiteSectionLibrary onAdd={addWebsiteSection} />
+            </div>
 
             <div className="mb-3 mt-8 flex items-center justify-between border-t border-white/10 pt-5">
               <h2 className="text-sm font-semibold tracking-tight text-white">
@@ -2341,20 +2615,20 @@ export default function EditorPage() {
           </div>
 
           {!previewMode && (
-            <div
-              className="mx-auto mb-4 flex gap-2 overflow-x-auto pb-1 xl:hidden"
-              style={{ width: editorHeaderWidth, maxWidth: "100%" }}
-            >
-              {blockLibrary.map((block) => (
-                <button
-                  className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:border-indigo-200 hover:text-indigo-700"
-                  key={block.type}
-                  onClick={() => addBlock(block.type)}
-                  type="button"
-                >
-                  + {block.label}
-                </button>
-              ))}
+            <div className="mx-auto mb-4 w-full max-w-3xl xl:hidden">
+              <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                {blockLibrary.map((block) => (
+                  <button
+                    className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition hover:border-indigo-200 hover:text-indigo-700"
+                    key={block.type}
+                    onClick={() => addBlock(block.type)}
+                    type="button"
+                  >
+                    + {block.label}
+                  </button>
+                ))}
+              </div>
+              <WebsiteSectionLibrary onAdd={addWebsiteSection} />
             </div>
           )}
 
@@ -2566,6 +2840,12 @@ export default function EditorPage() {
                       value={selectedBlock.text}
                     />
                   </label>
+                  <FontControls
+                    fontFamily={selectedBlock.fontFamily ?? "Arial"}
+                    fontSize={selectedBlock.fontSize ?? 16}
+                    onFontFamilyChange={updateSelectedFontFamily}
+                    onFontSizeChange={updateSelectedFontSize}
+                  />
                   <ColorControl
                     label="Text color"
                     onChange={(value) => updateSelected("color", value)}
@@ -2588,13 +2868,13 @@ export default function EditorPage() {
                     onChange={updateSelectedRotation}
                     value={selectedBlock.rotation}
                   />
-                  {["button", "card", "image", "map"].includes(selectedBlock.type) && (
+                  {["button", "card", "image", "imageCard", "map"].includes(selectedBlock.type) && (
                     <LinkControl
                       block={selectedBlock}
                       onChange={(value) => updateSelected("url", value)}
                     />
                   )}
-                  {selectedBlock.type === "image" && (
+                  {(selectedBlock.type === "image" || selectedBlock.type === "imageCard") && (
                     <ImageUploadControl
                       error={imageUploadError}
                       onUpload={(file) => void handleImageUpload(file)}
@@ -2682,6 +2962,12 @@ export default function EditorPage() {
                     value={selectedBlock.text}
                   />
                 </label>
+                <FontControls
+                  fontFamily={selectedBlock.fontFamily ?? "Arial"}
+                  fontSize={selectedBlock.fontSize ?? 16}
+                  onFontFamilyChange={updateSelectedFontFamily}
+                  onFontSizeChange={updateSelectedFontSize}
+                />
 
                 <ColorControl
                   label="Text color"
@@ -2706,13 +2992,13 @@ export default function EditorPage() {
                   onChange={updateSelectedRotation}
                   value={selectedBlock.rotation}
                 />
-                {["button", "card", "image", "map"].includes(selectedBlock.type) && (
+                {["button", "card", "image", "imageCard", "map"].includes(selectedBlock.type) && (
                   <LinkControl
                     block={selectedBlock}
                     onChange={(value) => updateSelected("url", value)}
                   />
                 )}
-                {selectedBlock.type === "image" && (
+                {(selectedBlock.type === "image" || selectedBlock.type === "imageCard") && (
                   <ImageUploadControl
                     error={imageUploadError}
                     onUpload={(file) => void handleImageUpload(file)}

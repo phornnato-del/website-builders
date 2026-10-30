@@ -11,7 +11,12 @@ import type {
   SiteNavItem,
   SitePage,
 } from "@/lib/api";
-import { isSafeLink, safeImageUrl, safeMapUrl } from "@/lib/editor-utils";
+import {
+  isSafeLink,
+  safeImageUrl,
+  safeMapUrl,
+  siteFontFamilyCss,
+} from "@/lib/editor-utils";
 
 function navigationItems(block: SiteBlock, pages: SitePage[]): SiteNavItem[] {
   return block.navItems !== undefined && block.navItems !== null
@@ -22,9 +27,14 @@ function navigationItems(block: SiteBlock, pages: SitePage[]): SiteNavItem[] {
 }
 
 function renderBlock(block: SiteBlock, site: PublishedSite) {
+  const fontStyle = {
+    fontFamily: siteFontFamilyCss(block.fontFamily),
+    fontSize: `${block.fontSize ?? 16}px`,
+  };
   const fill = {
     color: block.color,
     backgroundColor: block.backgroundColor,
+    ...fontStyle,
   };
 
   switch (block.type) {
@@ -34,7 +44,7 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
           className="h-full w-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-lg shadow-slate-900/5"
           style={fill}
         >
-          <span className="text-sm font-medium">{block.text || "Container"}</span>
+          <span className="text-sm font-medium" style={fontStyle}>{block.text || "Container"}</span>
         </div>
       );
     case "section":
@@ -44,7 +54,7 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
           className="grid h-full w-full place-items-center overflow-hidden rounded-3xl border border-white/80 p-6 text-center shadow-lg shadow-slate-900/5"
           style={fill}
         >
-          <span className="text-xl font-semibold tracking-tight sm:text-2xl">
+          <span className="text-xl font-semibold tracking-tight sm:text-2xl" style={fontStyle}>
             {block.text || "Section"}
           </span>
         </section>
@@ -53,7 +63,7 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
       return (
         <h2
           className="flex h-full w-full items-center overflow-hidden break-words text-4xl font-bold tracking-tight sm:text-6xl"
-          style={{ color: block.color }}
+          style={{ color: block.color, ...fontStyle }}
         >
           {block.text}
         </h2>
@@ -62,7 +72,7 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
       return (
         <p
           className="flex h-full w-full items-center overflow-hidden break-words text-base leading-7 sm:text-lg sm:leading-8"
-          style={{ color: block.color }}
+          style={{ color: block.color, ...fontStyle }}
         >
           {block.text}
         </p>
@@ -80,11 +90,40 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
           }}
         >
           {!imageUrl && (
-            <span className="rounded-lg bg-white/80 px-3 py-2">
+            <span className="rounded-lg bg-white/80 px-3 py-2" style={fontStyle}>
               ▧ {block.text || "Add an image URL"}
             </span>
           )}
         </div>
+      );
+    }
+    case "imageCard": {
+      const imageUrl = safeImageUrl(block.url);
+      const [title, ...description] = block.text.split("\n");
+      return (
+        <article className="h-full w-full overflow-hidden rounded-3xl border border-slate-200/80 shadow-xl shadow-slate-900/10" style={fill}>
+          <div
+            aria-label={imageUrl ? title || "Card image" : undefined}
+            className="h-1/2 min-h-24 w-full bg-cover bg-center"
+            role={imageUrl ? "img" : undefined}
+            style={{
+              backgroundColor: "#e0e7ff",
+              backgroundImage: imageUrl ? `url("${imageUrl}")` : undefined,
+            }}
+          >
+            {!imageUrl && (
+              <span className="grid h-full place-items-center text-sm text-indigo-700" style={fontStyle}>
+                ▧ Add a card image
+              </span>
+            )}
+          </div>
+          <div className="p-5">
+            <h3 className="font-semibold" style={fontStyle}>{title || "Card title"}</h3>
+            <p className="mt-2 whitespace-pre-line text-sm leading-6 opacity-80" style={fontStyle}>
+              {description.join("\n") || "Add a short description for this card."}
+            </p>
+          </div>
+        </article>
       );
     }
     case "map": {
@@ -101,7 +140,7 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
       ) : (
         <div
           className="grid h-full w-full place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-100 p-4 text-center text-sm text-slate-600"
-          style={{ backgroundColor: block.backgroundColor }}
+          style={{ backgroundColor: block.backgroundColor, ...fontStyle }}
         >
           Map embed unavailable
         </div>
@@ -133,11 +172,12 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
           className="flex h-full w-full items-center justify-between gap-3 overflow-hidden rounded-2xl border border-white/80 px-5 shadow-lg shadow-slate-900/5 backdrop-blur"
           style={fill}
         >
-          <span className="shrink-0 truncate font-semibold">{block.text}</span>
+          <span className="shrink-0 truncate font-semibold" style={fontStyle}>{block.text}</span>
           <div className="flex min-w-0 items-center gap-3 text-xs">
             {navItems.map((item) => (
               <Link
                 className="truncate hover:text-indigo-600"
+                style={fontStyle}
                 href={
                   item.pageSlug === "home"
                     ? `/sites/${encodeURIComponent(site.slug)}`
@@ -158,8 +198,8 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
           className="flex h-full w-full flex-col justify-center overflow-hidden rounded-3xl border border-slate-200/80 p-6 text-left shadow-xl shadow-slate-900/5"
           style={fill}
         >
-          <h3 className="text-lg font-semibold">{title || "Card title"}</h3>
-          <p className="mt-2 overflow-hidden text-sm leading-6 opacity-80">
+          <h3 className="text-lg font-semibold" style={fontStyle}>{title || "Card title"}</h3>
+          <p className="mt-2 overflow-hidden text-sm leading-6 opacity-80" style={fontStyle}>
             {description.join("\n") || "Add a short card description."}
           </p>
           {isSafeLink(block.url) && (
@@ -167,6 +207,7 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
               className="mt-3 text-sm font-medium text-indigo-600 hover:underline"
               href={block.url}
               rel={block.url.startsWith("http") ? "noopener noreferrer" : undefined}
+              style={fontStyle}
             >
               Learn more
             </a>
@@ -184,6 +225,7 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
           {[0, 1, 2].map((index) => (
             <div
               className="flex min-w-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-white/85 p-2 text-center text-xs font-medium shadow-sm sm:p-4 sm:text-sm"
+              style={fontStyle}
               key={index}
             >
               {columns[index] || `Column ${index + 1}`}
@@ -225,6 +267,8 @@ function renderBlock(block: SiteBlock, site: PublishedSite) {
       return (
         <ImageCarousel
           backgroundColor={block.backgroundColor}
+          fontFamily={fontStyle.fontFamily}
+          fontSize={fontStyle.fontSize}
           images={block.images ?? []}
           label={block.text}
         />
@@ -324,7 +368,7 @@ export function SitePreview({
                 minHeight: isMobile
                   ? block.type === "image" || block.type === "map" || block.type === "carousel"
                     ? "11rem"
-                    : block.type === "card"
+                    : block.type === "card" || block.type === "imageCard"
                       ? "10rem"
                       : block.type === "section"
                         ? "8rem"

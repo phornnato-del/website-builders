@@ -176,6 +176,23 @@ body {
     white-space: pre-line;
   }
 
+  .published-site .published-site-block-imageCard {
+    min-height: 18rem !important;
+  }
+
+  .published-site .published-site-block-imageCard article {
+    height: auto !important;
+    min-height: 18rem;
+  }
+
+  .published-site .published-site-block-imageCard article > div:first-child {
+    height: 11rem;
+  }
+
+  .published-site .published-site-block-imageCard article > div:last-child {
+    height: auto;
+  }
+
   .published-site .published-site-block-columns > div {
     height: auto !important;
     grid-template-columns: minmax(0, 1fr);

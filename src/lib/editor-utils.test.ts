@@ -11,7 +11,21 @@ import {
   normalizeSiteSlug,
   safeImageUrl,
   safeMapUrl,
+  siteFontFamilyCss,
 } from "./editor-utils";
+
+describe("site font families", () => {
+  it.each([
+    ["Arial", "Arial, Helvetica, sans-serif"],
+    ["Georgia", "Georgia, serif"],
+    ["Times New Roman", '"Times New Roman", serif'],
+    ["Courier New", '"Courier New", monospace'],
+    ["Verdana", "Verdana, sans-serif"],
+    ["Trebuchet MS", '"Trebuchet MS", sans-serif'],
+  ] as const)("maps %s to a safe CSS font stack", (fontFamily, expected) => {
+    expect(siteFontFamilyCss(fontFamily)).toBe(expected);
+  });
+});
 
 describe("website URL slugs", () => {
   it("normalizes names into URL-safe slugs", () => {

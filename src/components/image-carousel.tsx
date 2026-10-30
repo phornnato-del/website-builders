@@ -8,12 +8,16 @@ type ImageCarouselProps = {
   images: string[];
   label: string;
   backgroundColor: string;
+  fontFamily: string;
+  fontSize: string;
 };
 
 export function ImageCarousel({
   images,
   label,
   backgroundColor,
+  fontFamily,
+  fontSize,
 }: ImageCarouselProps) {
   const slides = images
     .map((image) => safeImageUrl(image))
@@ -52,7 +56,10 @@ export function ImageCarousel({
             <span className="mb-2 block text-2xl text-indigo-500" aria-hidden="true">
               ▧
             </span>
-            <span className="text-sm font-medium text-slate-600">
+            <span
+              className="text-sm font-medium text-slate-600"
+              style={{ fontFamily, fontSize }}
+            >
               Add up to three images
             </span>
           </div>

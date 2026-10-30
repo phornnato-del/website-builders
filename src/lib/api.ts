@@ -9,6 +9,14 @@ export type AuthResult = {
   csrf_token: string;
 };
 
+export type SiteFontFamily =
+  | "Arial"
+  | "Georgia"
+  | "Times New Roman"
+  | "Courier New"
+  | "Verdana"
+  | "Trebuchet MS";
+
 export type SiteBlock = {
   id: string;
   type:
@@ -21,6 +29,7 @@ export type SiteBlock = {
     | "button"
     | "navbar"
     | "card"
+    | "imageCard"
     | "columns"
     | "spacer"
     | "divider"
@@ -36,6 +45,8 @@ export type SiteBlock = {
   color: string;
   backgroundColor: string;
   url: string;
+  fontFamily?: SiteFontFamily;
+  fontSize?: number;
   images?: string[];
   navItems?: SiteNavItem[] | null;
 };

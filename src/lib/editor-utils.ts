@@ -1,3 +1,5 @@
+import type { SiteFontFamily } from "@/lib/api";
+
 export function isSafeLink(value: string): boolean {
   const url = value.trim();
   if (!url || url.startsWith("//")) return false;
@@ -9,6 +11,23 @@ export function isSafeLink(value: string): boolean {
     return ["http:", "https:", "mailto:", "tel:"].includes(parsed.protocol);
   } catch {
     return false;
+  }
+}
+
+export function siteFontFamilyCss(fontFamily: SiteFontFamily = "Arial"): string {
+  switch (fontFamily) {
+    case "Georgia":
+      return "Georgia, serif";
+    case "Times New Roman":
+      return '"Times New Roman", serif';
+    case "Courier New":
+      return '"Courier New", monospace';
+    case "Verdana":
+      return "Verdana, sans-serif";
+    case "Trebuchet MS":
+      return '"Trebuchet MS", sans-serif';
+    case "Arial":
+      return "Arial, Helvetica, sans-serif";
   }
 }
 
