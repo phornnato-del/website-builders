@@ -2157,6 +2157,7 @@ export default function EditorPage() {
     if (previewMode || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    event.currentTarget.focus({ preventScroll: true });
     const additiveSelection = event.shiftKey || event.ctrlKey || event.metaKey;
     const isSelected = selectedIds.includes(block.id);
     if ((event.ctrlKey || event.metaKey) && isSelected) {
