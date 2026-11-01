@@ -36,6 +36,39 @@ function ArrowIcon() {
   );
 }
 
+const teamMembers = [
+  {
+    name: "Horm Sophorn",
+    studentId: "00056333",
+    role: "Team leader",
+    image: "https://website-builders-five.vercel.app/api/images/6ae6cdf0b5c7b67b09c3ffb3",
+  },
+  {
+    name: "Hem Sopanha",
+    studentId: "00057947",
+    role: "Member",
+    image: "https://website-builders-five.vercel.app/api/images/6ae6ce10b5c7b67b09c3ffb4",
+  },
+  {
+    name: "Lee Sheerlong",
+    studentId: "00056996",
+    role: "Member",
+    image: "https://website-builders-five.vercel.app/api/images/6ae6ce2db5c7b67b09c3ffb5",
+  },
+  {
+    name: "Heang Makara",
+    studentId: "00057558",
+    role: "Member",
+    image: "https://website-builders-five.vercel.app/api/images/6ae6ce66b5c7b67b09c3ffb6",
+  },
+  {
+    name: "Vannak Fiannna",
+    studentId: "00054507",
+    role: "Member",
+    image: "https://website-builders-five.vercel.app/api/images/6ae6ce82b5c7b67b09c3ffb7",
+  },
+];
+
 export default function Home() {
   return (
     <main className="wb-landing">
@@ -219,6 +252,64 @@ export default function Home() {
         <a className="wb-scroll-cue" href="#how-it-works">
           <span /> Scroll to explore
         </a>
+      </section>
+
+      <section aria-labelledby="team-heading" className="wb-team-section" id="team">
+        <div aria-hidden="true" className="wb-orbit-system">
+          <div className="wb-orbit-path wb-orbit-path-one" />
+          <div className="wb-orbit-path wb-orbit-path-two" />
+          <div className="wb-orbit-path wb-orbit-path-three" />
+          <div className="wb-orbit-earth">
+            <span className="wb-orbit-land" />
+          </div>
+        </div>
+        <div className="wb-team-section-inner">
+          <div className="wb-team-section-heading">
+            <span>ABOUT US · GROUP 4</span>
+            <h2 id="team-heading">Meet the team behind WebBuilder</h2>
+            <p>
+              We are five students working together to build WebBuilder, a
+              visual website builder that helps people create and publish
+              websites without writing code.
+            </p>
+            <p>
+              Users can create pages with ready-made components, customize
+              layouts, colors, and images, preview their designs, and publish
+              their websites to share online. Through collaboration,
+              creativity, and problem-solving, we are building a practical
+              tool while growing our skills in software development, system
+              design, database management, and teamwork.
+            </p>
+            <blockquote>
+              Our mission is to make website creation simple, creative, and
+              accessible to everyone.
+            </blockquote>
+          </div>
+          <div className="wb-team-section-grid">
+            {teamMembers.map((member, index) => (
+              <article className="wb-team-profile" key={member.studentId}>
+                <div
+                  aria-label={`${member.name}, ${member.role}`}
+                  className="wb-team-profile-photo"
+                  role="img"
+                  style={{ backgroundImage: `url("${member.image}")` }}
+                >
+                  <span className="wb-team-profile-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="wb-team-profile-role">{member.role}</span>
+                </div>
+                <div className="wb-team-profile-info">
+                  <h3>{member.name}</h3>
+                  <p>
+                    <span>STUDENT ID</span>
+                    {member.studentId}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="wb-intro" id="how-it-works">
